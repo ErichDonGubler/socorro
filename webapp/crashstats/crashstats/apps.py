@@ -9,7 +9,6 @@ from fillmore.scrubber import (
     SCRUB_RULES_DEFAULT,
 )
 from fillmore.libsentry import set_up_sentry
-import markus
 from sentry_sdk.integrations.atexit import AtexitIntegration
 from sentry_sdk.integrations.boto3 import Boto3Integration
 from sentry_sdk.integrations.dedupe import DedupeIntegration
@@ -22,10 +21,8 @@ from sentry_sdk.integrations.threading import ThreadingIntegration
 from django.apps import AppConfig
 from django.conf import settings
 
+from socorro.libmarkus import METRICS, set_up_metrics
 from socorro.lib.libdockerflow import get_release_name
-
-
-metrics = markus.get_metrics("webapp.crashstats.apps")
 
 
 SCRUB_RULES_WEBAPP = [
@@ -48,7 +45,7 @@ SCRUB_RULES_WEBAPP = [
 
 
 def count_sentry_scrub_error(msg):
-    metrics.incr("sentry_scrub_error", 1)
+    METRICS.incr("webapp.sentry_scrub_error", 1)
 
 
 def configure_sentry():
@@ -60,12 +57,12 @@ def configure_sentry():
 
     set_up_sentry(
         release=release,
-        host_id=settings.HOST_ID,
+        host_id=settings.HOSTNAME,
         sentry_dsn=settings.SENTRY_DSN,
         # Disable frame-local variables
-        with_locals=False,
+        include_local_variables=False,
         # Disable request data from being added to Sentry events
-        request_bodies="never",
+        max_request_body_size="never",
         # All integrations should be intentionally enabled
         default_integrations=False,
         integrations=[
@@ -83,7 +80,7 @@ def configure_sentry():
     )
 
 
-class CrashstatsConfig(AppConfig):
+class CrashstatsAppConfig(AppConfig):
     name = "crashstats.crashstats"
 
     def ready(self):
@@ -91,7 +88,12 @@ class CrashstatsConfig(AppConfig):
         from crashstats.crashstats import signals  # noqa
 
         # Set up markus metrics
-        markus.configure(backends=settings.MARKUS_BACKENDS)
+        set_up_metrics(
+            statsd_host=settings.STATSD_HOST,
+            statsd_port=settings.STATSD_PORT,
+            hostname=settings.HOSTNAME,
+            debug=settings.LOCAL_DEV_ENV,
+        )
 
         # Set up sentry
         configure_sentry()

@@ -1,4 +1,4 @@
-FROM fsouza/fake-gcs-server:1.49.0@sha256:059b62e268520f0267db3ffdabe2bcea4d4db312b43f3fa7093982321e6764f5
+FROM fsouza/fake-gcs-server:1.49.2@sha256:36b0116fae5236e8def76ccb07761a9ca323e476f366a5f4bf449cac19deaf2d
 
 # add curl for use in healthcheck
 RUN apk add --no-cache curl
